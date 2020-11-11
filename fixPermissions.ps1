@@ -1,6 +1,5 @@
-Write-Host 'Hello, World!'
 $drive = Read-Host -Prompt 'Enter the letter associated with the drive, followed by a colon (e.g. E:, H:)'
-$drive_folders = Get-ChildItem $drive\ -Directory
+$drive_folders = Get-ChildItem $drive\
 $runData_folders = @()
 $icacls_messages = @()
 
@@ -19,7 +18,7 @@ foreach ($folder in $runData_folders)
     $message_and_location = icacls $drive\$folder /grant Everyone:RX /q
     $message_and_location += ( '   ( folder ' + $folder + ' )' )
     $icacls_messages += $message_and_location
-    $subfolders = Get-ChildItem $drive\$folder\ -Directory
+    $subfolders = Get-ChildItem $drive\$folder\
     Write-Host "Fixing permissions within" $folder 
     foreach ($subfolder in $subfolders)
     {
