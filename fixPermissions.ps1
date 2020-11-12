@@ -22,10 +22,10 @@ foreach ($folder in $runData_folders)
     $icacls_messages += $message_and_location
     $num_icacls_messages += 1
     $subfolders = Get-ChildItem $drive\$folder\
-    $file_traversal += ( "Attempted to fix permissions within " + $folder )
+    $file_traversal += ( "Attempting to fix permissions within " + $folder )
     foreach ($subfolder in $subfolders)
     {
-        $file_traversal += ( "..................................." + " > " + $subfolder )
+        $file_traversal += ( "...................................." + " > " + $subfolder )
         $message_and_location = icacls $drive\$folder\$subfolder /grant Everyone:RX /q
         $message_and_location += ( "`t( folder " + $folder + '\' + $subfolder + ' )' )
         $icacls_messages += $message_and_location
