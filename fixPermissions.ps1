@@ -3,7 +3,7 @@ $drive_folders = Get-ChildItem $drive\
 $runData_folders = @()
 $icacls_messages = @()
 
-Write-Host "Found the following run data folders:"
+Write-Host "Found the following folders of run data:"
 foreach ($folder in $drive_folders)
 {
     if ( $folder -match "r64140*" -or $folder -match "r54336U*" )
@@ -13,45 +13,96 @@ foreach ($folder in $drive_folders)
     }
 }
 
+$file_traversal = @()
+
 foreach ($folder in $runData_folders)
 {
     $message_and_location = icacls $drive\$folder /grant Everyone:RX /q
-    $message_and_location += ( '   ( folder ' + $folder + ' )' )
+    $message_and_location += ( "`t( folder " + $folder + ' )' )
     $icacls_messages += $message_and_location
+    $num_icacls_messages += 1
     $subfolders = Get-ChildItem $drive\$folder\
-    Write-Host "Fixing permissions within" $folder 
+    $file_traversal += ( "Attempted to fix permissions within " + $folder )
     foreach ($subfolder in $subfolders)
     {
-        Write-Host "........................." ">" $subfolder
+        $file_traversal += ( "..................................." + " > " + $subfolder )
         $message_and_location = icacls $drive\$folder\$subfolder /grant Everyone:RX /q
-        $message_and_location += ( '   ( folder ' + $folder + '\' + $subfolder + ' )' )
+        $message_and_location += ( "`t( folder " + $folder + '\' + $subfolder + ' )' )
         $icacls_messages += $message_and_location
+        $num_icacls_messages += 1
         $message_and_location = icacls $drive\$folder\$subfolder\* /grant Everyone:RX /q
-        $message_and_location += ( '   ( files within ' + $folder + '\' + $subfolder + " )" )
+        $message_and_location += ( "`t( files within " + $folder + '\' + $subfolder + " )" )
         $icacls_messages += $message_and_location
+        $num_icacls_messages += 1
     }
 }
-[bool] $failure_occurred = $false
+
+foreach ($line in $file_traversal) { Write-Host $line }
+
 $failure_messages = @()
-# $icacls_messages += "Successfully processed 2 files; Failed processing 1 file"
+$num_failure_messages = 0
+$success_messages = @()
+$num_success_messages = 0
+$mixed_messages = @()
+$num_mixed_messages = 0
 
-foreach($message in $icacls_messages) # CHECK FOR FAILURES
+foreach($message in $icacls_messages) # POPULATE SPECIFIC MESSAGE ARRAYS
 {
-    if ( $message -match "Failed processing [^0]" )
+    if ( ($message -match "Failed processing [^0]") -and ($message -match "Successfully processed 0") ) # complete failure
     {
-        $failure_occurred = $true
         $failure_messages += $message
+        $num_failure_messages += 1
     }
-}
-
-if ($failure_occurred)
-{
-    Write-Host "These attempts to change a file's permission failed:"
-    foreach($message in $failure_messages)
+    elseif ( ($message -match "Successfully processed [^0]") -and ($message -match "Failed processing 0") )  # complete success
     {
-        Write-Host $message
+        $success_messages += $message
+        $num_success_messages += 1
     }
-    Write-Host "All other file permissions were successfully changed to read and execute for all users."
+    else # mixed report 
+    {
+        $mixed_messages += $message
+        $num_mixed_messages += 1
+    }
 }
 
-else { Write-Host "All file permissions were successfully changed to read and execute for all users." }
+if ( -not $num_success_messages) # at least partial failure
+{
+    if ($num_mixed_messages) # if there are failures and mixed
+    {
+        Write-Host "`nThese attempts to change permissions were partially successful:"
+        foreach ($m in $mixed_messages) { Write-Host $m }
+        Write-Host "`nAll other attempts to change permissions failed."
+    }
+    else { Write-Host "`nAll attempts to change permissions failed." } # complete failure
+}
+elseif ( -not $num_failure_messages ) # at least partial success
+{
+    if ($num_mixed_messages) # if there are successes and mixed
+    {
+        Write-Host "`nThese attempts to change permissions were only partially successful:"
+        foreach ($m in $mixed_messages) { Write-Host $m }
+        Write-Host "`nAll other permissions were successfully changed to read and execute for all users."
+    }
+    else { Write-Host "`nAll file permissions were successfully changed to read and execute for all users." } # complete success
+}
+else # there must be some success and some failure messages
+{
+    Write-Host "`nThese attempts to change permissions failed:"
+    foreach($m in $failure_messages) { Write-Host $m }
+    if ($num_mixed_messages) # if there are also some mixed messages
+    {
+        Write-Host "`nThese attempts to change permissions were only partially successful:"
+        foreach($m in $mixed_messages)
+        {
+            Write-Host $m
+        }
+    }
+    Write-Host "`nAll other permissions were successfully changed to read and execute for all users."    
+}
+
+$input = Read-Host -Prompt "`nEnter 'y' to see a list of files whose permissions were successful changed, otherwise enter any other letter"
+
+if ($input -eq "y")
+{
+    foreach ($m in $success_messages) { Write-Host $m }
+}
