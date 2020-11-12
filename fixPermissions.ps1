@@ -6,7 +6,7 @@ $icacls_messages = @()
 Write-Host "Found the following folders of run data:"
 foreach ($folder in $drive_folders)
 {
-    if ( $folder -match "r64140*" -or $folder -match "r54336U*" )
+    if ( $folder -match "r64140*" -or $folder -match "r54336*" -or $folder -match "r54120*"  )
     {
         $runData_folders += $folder
         Write-Host $folder
@@ -37,7 +37,10 @@ foreach ($folder in $runData_folders)
     }
 }
 
-foreach ($line in $file_traversal) { Write-Host $line }
+foreach ($line in $file_traversal)
+{
+    Write-Host $line
+}
 
 $failure_messages = @()
 $num_failure_messages = 0
@@ -45,8 +48,9 @@ $success_messages = @()
 $num_success_messages = 0
 $mixed_messages = @()
 $num_mixed_messages = 0
+# $icacls_messages += "Successfully processed 2 files; Failed processing 1 file"
 
-foreach($message in $icacls_messages) # POPULATE SPECIFIC MESSAGE ARRAYS
+foreach($message in $icacls_messages) # CHECK FOR FAILURES
 {
     if ( ($message -match "Failed processing [^0]") -and ($message -match "Successfully processed 0") ) # complete failure
     {
@@ -65,28 +69,39 @@ foreach($message in $icacls_messages) # POPULATE SPECIFIC MESSAGE ARRAYS
     }
 }
 
-if ( -not $num_success_messages) # at least partial failure
+if ( -not $num_success_messages) # REPORT COMPLETION
 {
-    if ($num_mixed_messages) # if there are failures and mixed
+    if ($num_mixed_messages)
     {
+        Write-Host "`n`t###### Partial Failure! ######"
         Write-Host "`nThese attempts to change permissions were partially successful:"
         foreach ($m in $mixed_messages) { Write-Host $m }
         Write-Host "`nAll other attempts to change permissions failed."
     }
-    else { Write-Host "`nAll attempts to change permissions failed." } # complete failure
-}
-elseif ( -not $num_failure_messages ) # at least partial success
-{
-    if ($num_mixed_messages) # if there are successes and mixed
+    else 
     {
+        Write-Host "`n`t###### Complete Failure! ######"
+        Write-Host "`nAll attempts to change permissions failed."
+    }
+}
+elseif ( -not $num_failure_messages )
+{
+    if ($num_mixed_messages)
+    {
+        Write-Host "`n`t###### Partial Success! ######"
         Write-Host "`nThese attempts to change permissions were only partially successful:"
         foreach ($m in $mixed_messages) { Write-Host $m }
         Write-Host "`nAll other permissions were successfully changed to read and execute for all users."
     }
-    else { Write-Host "`nAll file permissions were successfully changed to read and execute for all users." } # complete success
+    else 
+    {
+        Write-Host "`n`t###### Complete Success! ######" 
+        Write-Host "`nAll file permissions were successfully changed to read and execute for all users."
+    }
 }
 else # there must be some success and some failure messages
 {
+    Write-Host "`n`t###### Partial Success! ######"
     Write-Host "`nThese attempts to change permissions failed:"
     foreach($m in $failure_messages) { Write-Host $m }
     if ($num_mixed_messages) # if there are also some mixed messages
@@ -106,3 +121,25 @@ if ($input -eq "y")
 {
     foreach ($m in $success_messages) { Write-Host $m }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
